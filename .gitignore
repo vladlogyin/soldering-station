@@ -1,0 +1,9 @@
+*.bin
+*.elf
+*.elf.map
+**/*.o
+**/*.d
+*.kdev*
+**/*.kate-swp
+toolchain/.checktoolchain
+toolchain/openocd-win/**

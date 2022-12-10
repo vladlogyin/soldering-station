@@ -1,0 +1,7 @@
+[submodule "libopencm3"]
+	path = libopencm3
+	url = https://github.com/libopencm3/libopencm3
+	branch = master
+[submodule "tinyprintf"]
+	path = tinyprintf
+	url = https://github.com/cjlano/tinyprintf
