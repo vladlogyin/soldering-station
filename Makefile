@@ -16,17 +16,15 @@ PROJECT_OBJ:= $(PROJECT).o
 PROJECT_ELF:= $(PROJECT).elf
 PROJECT_BIN:= $(PROJECT).bin
 
-SOURCES_CPP= lib/ringbuffer/ringbuffer.cpp
-SOURCES_CPP+= drivers/lm75/lm75.cpp drivers/bme280/bme280.cpp drivers/rc522/rc522.cpp drivers/ds3231/ds3231.cpp drivers/max7219/max7219.cpp drivers/ili9341/ili9341.cpp drivers/cdcacm/cdcacm.cpp
-SOURCES_CPP+= lib/systemutils.cpp lib/ringbuffer/ringbuffer.cpp
-SOURCES_C= tinyprintf/tinyprintf.c
+SOURCES_CPP= drivers/delay.cpp drivers/ui/st7739/st7739.cpp
+SOURCES_C=
 
 OBJECTS:= $(patsubst %.cpp, %.o, $(SOURCES_CPP)) $(patsubst %.c, %.o, $(SOURCES_C))
 DEPENDS:= $(patsubst %.cpp,%.d,$(SOURCES_CPP)) $(patsubst %.c, %.d, $(SOURCES_C)) $(PROJECT).d
 # setup
 INCLUDE_DIRS= -I. -I./drivers -I./libopencm3/include
 LIBRARY_DIRS= -L./libopencm3/lib
-LIBRARIES= -lgcc -lm -lopencm3_stm32f1 -lstdc++
+LIBRARIES= -lgcc -lm -lopencm3_gd32e23 -lstdc++
 
 # Select c++17 and turn optimizations on
 COMPILE_OPTIONS= -fno-exceptions -fno-non-call-exceptions -fno-common -ffunction-sections -fdata-sections -flto -std=c++17 -O2 -fno-rtti -finline-small-functions -findirect-inlining
@@ -64,10 +62,8 @@ OPENOCD_IP=localhost
 endif
 
 # Define MCU specific flags here
-# Example for an STM32F103 MCU with a cortex m3 core
-# -mcpu=cortex-m3 -mthumb -msoft-float -DSTM32F1
-LIBOPENCM3=libopencm3/lib/libopencm3_stm32f1.a
-ARCHITECTURE_FLAGS= -mcpu=cortex-m3 -mthumb -msoft-float -DSTM32F1
+LIBOPENCM3=libopencm3/lib/libopencm3_gd32e23.a
+ARCHITECTURE_FLAGS= -mcpu=cortex-m23 -mthumb -msoft-float -DGD32E23
 
 CXXFLAGS= $(COMPILE_OPTIONS) $(ARCHITECTURE_FLAGS) $(INCLUDE_DIRS)
 CFLAGS= $(COMPILE_OPTIONS) $(ARCHITECTURE_FLAGS) $(INCLUDE_DIRS)
@@ -75,7 +71,7 @@ ASFLAGS= $(COMPILE_OPTIONS) -c
 
 LDFLAGS= -mthumb -nostartfiles --static --specs=nosys.specs --specs=nano.specs
 # Select linker script
-LDFLAGS+= -T toolchain/ldscripts/stm32f103.ld
+LDFLAGS+= -T toolchain/ldscripts/gd32e230f6p6.ld
 # Add linker optimizations
 LDFLAGS+= $(CXXFLAGS)
 # Add libraries
@@ -117,13 +113,13 @@ flash: build $(OPENOCD)
 	-pkill openocd -9
 	-rm target.bin
 	ln -s $(PROJECT_BIN) target.bin
-	$(OPENOCD) -f toolchain/openocd/stm32f1_flash.cfg
+	$(OPENOCD) -f toolchain/openocd/gd32e23_flash.cfg
 debug: flash
 	-pkill openocd -9
 ifeq ($(HOST),WSL)
 #	netsh.exe interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=3333 connectaddress=localhost connectport=3333
 endif
-	$(OPENOCD) -f toolchain/openocd/stm32f1_debug.cfg &
+	$(OPENOCD) -f toolchain/openocd/gd32e23_debug.cfg &
 	$(GDB) -iex "target extended-remote $(OPENOCD_IP):3333" $(PROJECT_ELF)
 # libopencm3
 
