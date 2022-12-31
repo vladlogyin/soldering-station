@@ -34,6 +34,7 @@
 #define ST77XX_TEOFF 0x34
 #define ST77XX_TEON 0x35
 #define ST77XX_MADCTL 0x36
+#define ST77XX_VSCSAD 0x37
 #define ST77XX_COLMOD 0x3A
 
 #define ST77XX_RAMCTRL 0xB0
@@ -43,6 +44,13 @@
 #define ST77XX_MADCTL_MV 0x20
 #define ST77XX_MADCTL_ML 0x10
 #define ST77XX_MADCTL_RGB 0x00
+
+void sendCommand ( const uint8_t command );
+void sendData ( const uint8_t data[], const uint16_t len );
+void setWindow(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
+void setScrollArea(uint16_t by, uint16_t sy, uint16_t ty);
+void setScroll(uint16_t y);
+void clearScreen(uint16_t color);
 
 class io {
 public:
@@ -126,64 +134,31 @@ void st7739::init()
 	RST.set();
 	delay(20000);
 
-	// static constexpr uint8_t _initCommands[] =
-	// {
-	// // command, parameter count, parameters...
-	// 	ST77XX_SLPOUT, 0,
-	// 	ST77XX_COLMOD, 1, 0b101,
-	// 	ST77XX_MADCTL, 1, 0b1000,
-	// 	ST77XX_CASET, 4, 0x00, 0x00, 0x00, 240,
-	// 	ST77XX_RASET, 4, 0x00, 0x00, 320>>8, 320&0xFF,
-	// 	ST77XX_NORON, 0,
-	// 	ST77XX_DISPON, 0,
-	// };
 #define ST_CMD_DELAY_150 0x40
 #define ST_CMD_DELAY_300 0x80
 #define ST_CMD_DELAY_450 0xC0
 
-	// static constexpr uint8_t _initCommands[] =
-	// {
-	// // command, parameter count, parameters...
- //    ST77XX_SWRESET,   ST_CMD_DELAY_300, //  1: Software reset, no args, w/delay
- //    ST77XX_SLPOUT,   ST_CMD_DELAY_300, //  2: Out of sleep mode, no args, w/delay
- //    ST77XX_VSCRDEF, 6, 0x00, 0x00, 0x01, 0x40, 0x00, 0x00,
-	// ST77XX_NORON  ,   ST_CMD_DELAY_150, //  8: Normal display on, no args, w/delay
-	// ST77XX_INVON  ,   0,  //  7: hack
- //    ST77XX_MADCTL, 1,  0x00/*0x08*/,  //Row/col addr, bottom-top refresh
-	// ST77XX_COLMOD, 1|ST_CMD_DELAY_150, 0x55,//  16-bit color
- //   ST77XX_DISPON ,   ST_CMD_DELAY_300,
- //    ST77XX_CASET, 4,     //  5: Column addr set, 4 args, no delay:
- //      0x00,
- //      0,   //     XSTART = 0
- //      0,
- //      240,  //     XEND = 240
- //    ST77XX_RASET  , 4,              //  6: Row addr set, 4 args, no delay:
- //      0x00,
- //      0,             //     YSTART = 0
- //      320>>8,
- //      320&0xFF,  //     YEND = 320
-	// };
 
 		static constexpr uint8_t _initCommands[] =
 	{
 	// command, parameter count, parameters...
-    ST77XX_SLPOUT,   ST_CMD_DELAY_300, //  2: Out of sleep mode, no args, w/delay
-	ST77XX_COLMOD, 1|ST_CMD_DELAY_150, 0x55,//  16-bit color
-    ST77XX_MADCTL, 1,  0x00/*0xa0*/,  //Row/col addr, bottom-top refresh
-	ST77XX_INVON  ,   0,  //  7: hack
-	ST77XX_NORON  ,   ST_CMD_DELAY_150, //  8: Normal display on, no args, w/delay
-	ST77XX_DISPON ,   ST_CMD_DELAY_300,
+    ST77XX_SLPOUT,   ST_CMD_DELAY_300,
+	ST77XX_COLMOD, 1|ST_CMD_DELAY_150, 0x55,
+    ST77XX_MADCTL, 1,  0xa0/*0xa0*/,
+	ST77XX_INVON, 0,
+	ST77XX_NORON, ST_CMD_DELAY_150,
+	ST77XX_DISPON, ST_CMD_DELAY_300,
     //ST77XX_VSCRDEF, 6, 0x00, 0x00, 0x01, 0x40, 0x00, 0x00,
-    ST77XX_CASET, 4,     //  5: Column addr set, 4 args, no delay:
-      0x00,
+    ST77XX_RASET, 4,
+      0,
       0,   //     XSTART = 0
       0,
       240,  //     XEND = 240
-    ST77XX_RASET  , 4,              //  6: Row addr set, 4 args, no delay:
+    ST77XX_CASET  , 4,
       0x00,
-      0,             //     YSTART = 0
+      0,
       320>>8,
-      320&0xFF,  //     YEND = 320
+      320&0xFF,
 	};
 
 	// Run init commands
@@ -193,12 +168,9 @@ void st7739::init()
 		const uint8_t paramCount = _initCommands[i+1] &0x3F;
 		const uint8_t delayCount = _initCommands[i+1] >> 6;
 		// Send command
-		DC.clear();
-		delay(1);
-		spi_xfer(SPI0,cmd);
-		delay(1);
+		sendCommand(cmd);
+
 		DC.set();
-		delay(1);
 		// Send parameters
 		for(int j=0;j<paramCount;j++)
 		{
@@ -210,52 +182,100 @@ void st7739::init()
 			delay(150000);
 		i+=paramCount+2;
 	}
-	//setWindow(0,320,0,240);
+	clearScreen(0xFFFF);
+	setWindow(10,10,310,210);
+	sendCommand(ST77XX_RAMWR);
 
-	DC.clear();
-		delay(1);
-	spi_xfer(SPI0,ST77XX_RAMWR);
-		delay(1);
+
 	DC.set();
-
-	for(int y=0;y<320;y++)
-		for(int x=0;x<240;x++)
+	for(int y=10;y<230;y++)
+		for(int x=10;x<310;x++)
 		{
-			uint32_t r = y *31/320;
-			uint32_t b = x *31/240;
+			uint32_t r = y *64/240;
+			uint32_t b = x *64/320;
 			spi_xfer(SPI0,(r&0x1F)<<3);
 			spi_xfer(SPI0,b&0x1F);
 		}
+
+	setScrollArea(50,220,50);
+
+	for(int y=50;y<271;y++)
+	{
+		setScroll(y);
+		delay(5000);
+	}
+
 }
 
-void st7739::setWindow(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
+void setWindow(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 {
-	DC.clear();
-		delay(100);
-	spi_xfer(SPI0,ST77XX_CASET);
-		delay(100);
+	x2--;y2--;
+	 const uint8_t columnData[4]={
+		 uint8_t(x1>>8),uint8_t(x1&0xFF),
+		 uint8_t(x2>>8),uint8_t(x2&0xFF)
+	};
+	 const uint8_t rowData[4]={
+		 uint8_t(y1>>8),uint8_t(y1&0xFF),
+		 uint8_t(y2>>8),uint8_t(y2&0xFF)
+	};
+
+	sendCommand(ST77XX_CASET);
+	sendData(columnData,std::size(columnData));
+	sendCommand(ST77XX_RASET);
+	sendData(rowData,std::size(rowData));
+}
+void setScrollArea(uint16_t by, uint16_t sy, uint16_t ty)
+{
+	 const uint8_t data[6]={
+		 uint8_t(ty>>8),uint8_t(ty&0xFF),
+		 uint8_t(sy>>8),uint8_t(sy&0xFF),
+		 uint8_t(by>>8),uint8_t(by&0xFF)
+	};
+
+	 sendCommand(ST77XX_VSCRDEF);
+	 sendData(data,std::size(data));
+
+}
+
+void setScroll(uint16_t y)
+{
+	sendCommand(ST77XX_VSCSAD);
 	DC.set();
-		delay(100);
-	spi_xfer(SPI0,x1>>8);
-	spi_xfer(SPI0,x1&0xFF);
-	spi_xfer(SPI0,x2>>8);
-	spi_xfer(SPI0,x2&0xFF);
-		delay(100);
-	DC.clear();
-		delay(100);
-	spi_xfer(SPI0,ST77XX_RASET);
-		delay(100);
-	DC.set();
-		delay(100);
-	spi_xfer(SPI0,y1>>8);
-	spi_xfer(SPI0,y1&0xFF);
-	spi_xfer(SPI0,y2>>8);
-	spi_xfer(SPI0,y2&0xFF);
-		delay(10);
+	spi_xfer(SPI0,y>>8); spi_xfer(SPI0,y&0xFF);
+
 }
 
 void st7739::update()
 {
 
 }
+
+void sendCommand ( const uint8_t command )
+{
+	DC.clear();
+	spi_xfer(SPI0,command);
+}
+
+void sendData ( const uint8_t data[], const uint16_t len)
+{
+	DC.set();
+	for(uint16_t i=0;i<len;i++)
+	spi_xfer(SPI0,data[i]);
+
+
+}
+
+void clearScreen(uint16_t color)
+{
+	setWindow(0,0,320,240);
+	sendCommand(ST77XX_RAMWR);
+	DC.set();
+	for(uint32_t i=0;i<240*320;i++)
+	{
+		spi_xfer(SPI0,color>>8);
+		spi_xfer(SPI0,color&0xFF);
+	}
+}
+
+
 
