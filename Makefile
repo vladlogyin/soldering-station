@@ -16,7 +16,7 @@ PROJECT_OBJ:= $(PROJECT).o
 PROJECT_ELF:= $(PROJECT).elf
 PROJECT_BIN:= $(PROJECT).bin
 
-SOURCES_CPP= drivers/delay.cpp drivers/ui/st7739/st7739.cpp
+SOURCES_CPP= drivers/delay.cpp drivers/ui/st7739/st7739.cpp drivers/ui/st7739/font.cpp drivers/input/encoder/encoder.cpp
 SOURCES_C=
 
 OBJECTS:= $(patsubst %.cpp, %.o, $(SOURCES_CPP)) $(patsubst %.c, %.o, $(SOURCES_C))
@@ -88,6 +88,13 @@ all: build
 install: flash
 # Include header dependencies
 -include $(DEPENDS)
+
+drivers/ui/st7739/font.h drivers/ui/st7739/font.cpp: font-generation
+
+font-generation: toolchain/font-generator/*
+	$(MAKE) -C toolchain/font-generator -q font-deps || OUTPUT=$(shell pwd)/drivers/ui/st7739/ $(MAKE) -C toolchain/font-generator font
+
+
 # Recompile objects when Makefile changes
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@

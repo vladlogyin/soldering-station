@@ -5,6 +5,7 @@
 
 #include <drivers/ui/st7739/st7739.h>
 #include <drivers/delay.h>
+#include <drivers/input/encoder/encoder.h>
 int main()
 {
 
@@ -13,13 +14,31 @@ int main()
     rcc_periph_clock_enable(RCC_GPIOF);
     rcc_periph_clock_enable(RCC_SPI0);
 
-    st7739 disp;
+    st7739& disp = st7739::getInstance();
+    encoder& enc = encoder::getInstance();
+    disp.init();
+    enc.init();
+
+    const static int maxTemp=250;
+    const static int minTemp=0;
+    const static int scrollLength=maxTemp-minTemp;
+
+    int targetTemp=minTemp;
     while(true)
     {
-        for(int i=0;i<1000;i++)
-            delay(1000);
-        disp.init();
+        while(!enc.poll())
+            delay(10000);
+        auto delta = enc.getDelta();
+        targetTemp+=delta;
+        if(targetTemp>maxTemp)
+            targetTemp=maxTemp;
+        if(targetTemp<minTemp)
+            targetTemp=minTemp;
+
+        disp.setTargetTemp(targetTemp);
+        disp.update();
     }
+
 
     return 0;
 }
