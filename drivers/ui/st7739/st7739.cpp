@@ -233,8 +233,8 @@ void st7739::update()
 		return;
 	_invalidated=false;
 
-	clearArea(0xFFFF,0,0,FONT_W*3,FONT_H*3);
-	displayInt(0,0,_currentTemp);
+	//clearArea(0xFFFF,0,0,FONT_W*5,FONT_H*3);
+	displayInt(0,0,_currentTemp,1);
 	displayInt(0,FONT_H,_targetTemp);
 	displayInt(0,FONT_H*2,_currentDuty);
 }
@@ -244,7 +244,7 @@ void st7739::setCurrentTemp(float temp)
 {
 	if(_currentTemp==temp)
 		return;
-	_currentTemp=temp;
+	_currentTemp=temp*10;
 	invalidate();
 }
 

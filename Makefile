@@ -16,7 +16,7 @@ PROJECT_OBJ:= $(PROJECT).o
 PROJECT_ELF:= $(PROJECT).elf
 PROJECT_BIN:= $(PROJECT).bin
 
-SOURCES_CPP= drivers/delay.cpp drivers/ui/st7739/st7739.cpp drivers/ui/st7739/font.cpp drivers/input/encoder/encoder.cpp
+SOURCES_CPP= drivers/delay.cpp drivers/ui/st7739/st7739.cpp drivers/ui/st7739/font.cpp drivers/input/encoder/encoder.cpp drivers/temp/type_c/type_c.cpp drivers/output/pwm/pwm.cpp
 SOURCES_C=
 
 OBJECTS:= $(patsubst %.cpp, %.o, $(SOURCES_CPP)) $(patsubst %.c, %.o, $(SOURCES_C))
