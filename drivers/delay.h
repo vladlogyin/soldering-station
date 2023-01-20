@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-#define DELAY_CALIB 14.3
+#define DELAY_CALIB 14.3f
 
 void delay(const uint32_t us);
 
